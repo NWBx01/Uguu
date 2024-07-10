@@ -25,6 +25,8 @@ noExt = $(shell echo $(i) | cut -d '.' -f1)
 
 all: builddirs npm_dependencies ejs minify copy-img copy-php copy-benchmarks
 
+no-dependencies: builddirs ejs minify copy-img copy-php copy-benchmarks
+
 ejs:
 	$(foreach i,$(pageList), \
 	"node_modules/ejs/bin/cli.js" -f $(CURDIR)/$(CONF) $(CURDIR)/src/templates/$(i) -o $(CURDIR)/build/html/unmin/$(noExt).html;)
@@ -94,15 +96,15 @@ uninstall:
 npm_dependencies:
 	$(NPM) install
 
-build-container-no-cache:
+build-container-no-cache: npm_dependencies
 		tar --exclude='uguuForDocker.tar.gz' --exclude='vendor' --exclude='node_modules' --exclude='build' --exclude='dist' --exclude='.git' -czf uguuForDocker.tar.gz src docker Makefile package.json package-lock.json
 		mv uguuForDocker.tar.gz docker/
-		docker build -f docker/Dockerfile --build-arg DOMAIN=$(SITEDOMAIN) --build-arg FILE_DOMAIN=$(FILESDOMAIN) --build-arg CONTACT_EMAIL=$(CONTACT_EMAIL) --build-arg MAX_SIZE=$(MAXSIZE) --build-arg EXPIRE_TIME=$(EXPIRE_TIME) --no-cache -t uguu:$(PKG_VERSION) .
+		docker build -f docker/Dockerfile --no-cache -t uguu:$(PKG_VERSION) .
 
-build-container:
+build-container: npm_dependencies
 		tar --exclude='uguuForDocker.tar.gz' --exclude='vendor' --exclude='node_modules' --exclude='build' --exclude='dist' --exclude='.git' -czf uguuForDocker.tar.gz src docker Makefile package.json package-lock.json
 		mv uguuForDocker.tar.gz docker/
-		docker build -f docker/Dockerfile --build-arg DOMAIN=$(SITEDOMAIN) --build-arg FILE_DOMAIN=$(FILESDOMAIN) --build-arg CONTACT_EMAIL=$(CONTACT_EMAIL) --build-arg MAX_SIZE=$(MAXSIZE) --build-arg EXPIRE_TIME=$(EXPIRE_TIME) -t uguu:$(PKG_VERSION) .
+		docker build -f docker/Dockerfile -t uguu:$(PKG_VERSION) .
 
 run-container:
 		docker run --name uguu -d -p 80:80 -p 443:443 uguu:$(PKG_VERSION)

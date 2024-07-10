@@ -1,0 +1,58 @@
+version: '1.0'
+
+services:
+  uguu:
+    container_name: uguu
+    image: uguu:1.8.6 #Container must be built manually.
+    hostname: uguu.local
+    restart: unless-stopped
+    volumes:
+       - "uguu/db:/var/www/db:rw"
+       - "uguu/files:/var/www/files:rw"
+    ports:
+      - 80:80
+      - 443:443
+    environment:      
+    #  - DEBUG=false
+      - BENCHMARK_MODE=false
+    #  - MAX_UPLOAD_SIZE=128 #MiB
+    #  - EXPIRE_TIME=8 #Set to 0 to disable
+    #  - EXPIRE_TIME_UNIT=hours
+    #  - SITE_NAME=Uguu
+    #  - SITE_SUBTITLE=Temporary file hosting
+      - DOMAIN=dev.uguu.se
+      - FILE_DOMAIN=files.dev.uguu.se #Setup to use subdomains by default.
+    #  - ABUSE_CONTACT=abuse@email.com
+    #  - INFO_CONTACT=info@email.com
+    #  - SERVER_CN_LOC=Sweden
+    #  - SITE_META_INFO=${SITENAME} is a temporary file hosting service, upload files up to ${MAX_UPLOAD_SIZE}MiB for 24 hours.
+    #  - SHOW_GITHUB=true
+    #  - SHOW_DONATION_BANNER=false
+    #  - PAYPAL_URL=
+    #  - BTC_ADDR=
+    #  - ETH_ADDR=
+    #  - KOFI_URL=
+    #  - SHOW_MALWARE_BANNER=false
+    #  - DB_MODE=sqlite
+    #  - DB_PATH=/var/www/db/uguu.sq3
+    #  - DB_USER=NULL
+    #  - DB_PASS=NULL
+    #  - LOG_IP=false
+    #  - ANTI_DUPE=false
+    #  - BLACKLIST_DB=false
+    #  - FILTER_MODE=true
+    #  - RATE_LIMIT=false
+    #  - RATE_LIMIT_TIMEOUT=60
+    #  - RATE_LIMIT_FILES=100
+    #  - FILES_ROOT=/var/www/files/
+    #  - FILES_RETRIES=15
+    #  - NAME_LENGTH=8
+    #  - ID_CHARSET=abcdefghijklmnopqrstuvwxyzABCDEFGHJKLMNOPQRSTUVWXYZ #Charset can only be uppercase and lowercase. You must edit one of the PHP files to user numerals, etc.
+      - SSL=true # Set to 'false' to run plain HTTP
+    #  - MOE_INSTALL=false
+      - MOE_FIRST_RUN=false #Set to 'true' ONLY on first run. Set MOE_USER and MOE_PASS to create login credentials. Leaving this on will cause duplicate user entries into the database.
+    #  - MOE_REBUILD=false #Set to 'true' if you need to change the MOE_ROOT, or MOE_MOE_URL
+    #  - MOE_ROOT=/var/www/moepanel/
+    #  - MOE_URL=moepanel.dev.uguu.se
+      - MOE_USER=admin@uguu.se
+      - MOE_PASS=SUPERSECUREPASSWORD
