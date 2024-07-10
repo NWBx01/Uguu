@@ -2,13 +2,20 @@
 
 service nginx stop
 
-echo "Seting up Uguu"
-make no-dependencies && make install
-
-echo "Uguu starting..."
-
+echo "Seting up Uguu..."
 
 rm /etc/nginx/sites-enabled/default
+
+# Reload Nginx Server conf
+rm /etc/nginx/sites-enabled/uguu.conf
+rm /etc/nginx/nginx.conf
+cp docker/nginx/uguu.conf /etc/nginx/sites-enabled/uguu.conf
+cp docker/nginx/nginx.conf /etc/nginx/nginx.conf
+
+# Modify nginx values
+sed -i "s#XMAINDOMAINX#${DOMAIN}#g" /etc/nginx/sites-enabled/uguu.conf
+sed -i "s#XFILESDOMAINX#${FILE_DOMAIN}#g" /etc/nginx/sites-enabled/uguu.conf
+sed -i "s#client_max_body_size 128M#client_max_body_size ${MAX_UPLOAD_SIZE}M#g" /etc/nginx/nginx.conf
 
 # If EXPIRE_TIME is non-zero, setup scripts for file expiration
 if [ ! ${EXPIRE_TIME} = "0" ]; then \
@@ -27,22 +34,22 @@ if [ ! ${EXPIRE_TIME} = "0" ]; then \
 	sed -i "s#XXX#${EXPIRE_TIME}#g" /var/www/uguu/src/static/scripts/checkdb.sh; \
 fi
 
-# Modify nginx values
-sed -i "s#XMAINDOMAINX#${DOMAIN}#g" /etc/nginx/sites-enabled/uguu.conf
-sed -i "s#XFILESDOMAINX#${FILE_DOMAIN}#g" /etc/nginx/sites-enabled/uguu.conf
-sed -i "s#client_max_body_size 128M#client_max_body_size ${MAX_UPLOAD_SIZE}M#g" /etc/nginx/nginx.conf
+# Create config.json from template and substitute in environment variable values.
+envsubst < /var/www/uguu/config-template.json > /var/www/uguu/src/config.json
+cd /var/www/uguu || exit
+make no-dependencies && make install
 
 # If SSL is false, then change settings so that files are served by plain HTTP.
 # Else leave everything as-is and generate SSL certs via Let's Encrypt
 if [ ${SSL} = "false" ]; then \
 	sed -i "s#ssl on#ssl off#g" /etc/nginx/sites-enabled/uguu.conf; \
+	sed -i "s#80;#443;#g" /etc/nginx/sites-enabled/uguu.conf; \
 	sed -i "s#443 ssl http2#80#g" /etc/nginx/sites-enabled/uguu.conf; \
 	sed -i "s#443 ssl#80#g" /etc/nginx/sites-enabled/uguu.conf; \
 	sed -i "s#ssl_#\#ssl_#g" /etc/nginx/sites-enabled/uguu.conf; \
 	sed -i "s#resolver#\#resolver#g" /etc/nginx/sites-enabled/uguu.conf; \
 	sed -i "s#add_header#\#add_header#g" /etc/nginx/sites-enabled/uguu.conf; \
 	sed -i "s#https#http#g" /etc/nginx/sites-enabled/uguu.conf; \
-	sed -i "s#80;#443;#g" /etc/nginx/sites-enabled/uguu.conf; \
 	sed -i "s#https#http#g" /var/www/uguu/dist/Classes/Upload.php; \
 	else \
 	/root/.acme.sh/acme.sh --set-default-ca --server letsencrypt; \
@@ -53,27 +60,17 @@ fi
 sed -i "s#post_max_size = 8M#post_max_size = ${MAX_UPLOAD_SIZE}M#g" /etc/php/8.3/fpm/php.ini
 sed -i "s#upload_max_filesize = 2M#upload_max_filesize = ${MAX_UPLOAD_SIZE}M#g" /etc/php/8.3/fpm/php.ini
 
-# Create config.json from template and substitute in environment variable values.
-envsubst < /var/www/uguu/config-template.json > /var/www/uguu/dist/config.json 
-
 # If an Uguu database is not found, create one.
 if [ ! -e ${DB_PATH} ]; then echo "Creating new Uguu database." && sqlite3 ${DB_PATH} -init /var/www/uguu/src/static/dbSchemas/sqlite_schema.sql ""; else echo "Uguu database found."; fi
 
 cd /var/www/moepanel
 
-if [ ${MOE_FIRST_RUN} = "true" ]; then \
-	sed -i "s#YOURPASSWORDHERE#${MOE_PASS}#g" /var/www/moepanel/gen_pw.php; \
-	php /var/www/moepanel/gen_pw.php > /tmp/password_hash.txt; \
-    passhash=$(cat /tmp/password_hash.txt); \
-    make; \
-    sqlite3 ${DB_PATH} "INSERT INTO accounts VALUES(1,'${MOE_USER}','$passhash',1);"; \
-fi
-
 if [ ${MOE_REBUILD} = "true" ]; then \
     echo "Setting up MoePanel"; \
 	mkdir ${MOE_ROOT}; \
 	chown www-data:www-data ${MOE_ROOT}; \
-	rm /var/www/moepanel/dist/; \
+	rm -rf /var/www/moepanel/dist/; \
+	make; \
 	sed -i "s#\#Moe##g" /etc/nginx/sites-enabled/uguu.conf; \
 	sed -i "s#XMOEPANELDOMAINX#${MOE_URL}#g" /etc/nginx/sites-enabled/uguu.conf; \
 	sed -i "s#/path/to/your/uguu/or/pomf/db.sq3#${DB_PATH}#g" /var/www/moepanel/static/php/settings.inc.php; \
@@ -88,6 +85,13 @@ if [ ${MOE_REBUILD} = "true" ]; then \
     sed -i "s#index.html\#fail-cred#index.php\#fail-cred#g" /var/www/moepanel/static/php/core.php; \
 fi
 
+if [ ${MOE_ADDUSER} = "true" ]; then \
+	sed -i "s#YOURPASSWORDHERE#${MOE_PASS}#g" /var/www/moepanel/gen_pw.php; \
+	php /var/www/moepanel/gen_pw.php > /tmp/password_hash.txt; \
+    passhash=$(cat /tmp/password_hash.txt); \
+    sqlite3 ${DB_PATH} "INSERT INTO accounts VALUES(1,'${MOE_USER}','$passhash',1);"; \
+fi
+
 # Set file and folder permissions
 chown www-data:www-data ${DB_PATH}
 chown www-data:www-data ${FILES_ROOT}
@@ -97,6 +101,7 @@ chmod -R 775 /var/www/
 # Change directory. Not really necessary, but might as well.
 cd /var/www/uguu || exit
 
+echo "Uguu starting..."
 # Start everything for real.
 service nginx start
 service php8.3-fpm start

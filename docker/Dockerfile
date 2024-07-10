@@ -30,6 +30,7 @@ ENV ABUSE_CONTACT "abuse@email.com"
 ENV INFO_CONTACT "info@email.com"
 ENV SERVER_CN_LOC "Sweden"
 ENV SITE_META_INFO "${SITENAME} is a temporary file hosting service, upload files up to ${MAX_UPLOAD_SIZE}MiB for 24 hours."
+ENV RESPONSE_TIME "24 hours"
 ENV SHOW_GITHUB "true"
 ENV SHOW_DONATION_BANNER "false"
 ENV PAYPAL_URL ""
@@ -56,7 +57,7 @@ ENV SSL "false"
 
 # MoePanel Settings
 ENV MOE_INSTALL "true"
-ENV MOE_FIRST_RUN "false"
+ENV MOE_ADDUSER "false"
 ENV MOE_REBUILD "false"
 ENV MOE_ROOT "/var/www/moepanel/"
 ENV MOE_URL "moepanel.dev.uguu.se"
@@ -108,7 +109,6 @@ RUN if [ ${MOE_INSTALL} = "true" ]; then \
 	  make; \
     fi
 
-
 WORKDIR  /var/www/
 
 # Expose port 80 from the container
@@ -123,7 +123,6 @@ RUN if [ ${SSL} = "true" ]; then \
       chmod a+x acmeinstall.sh; \
       ./acmeinstall.sh; \
     fi
-
 
 # Set default workdir
 WORKDIR /var/www/uguu

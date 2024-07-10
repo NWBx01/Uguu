@@ -19,7 +19,7 @@
   "infoContact": "${INFO_CONTACT}",
   "ServerCountryLocation": "${SERVER_CN_LOC}",
   "SiteMetaInfo": "${SITE_META_INFO}",
-  "responseTime": "${EXPIRE_TIME} ${EXPIRE_TIME_UNIT}",
+  "responseTime": "${RESPONSE_TIME}",
   "showGithub": ${SHOW_GITHUB},
   "donationBanner": ${SHOW_DONATION_BANNER},
   "paypalUrl": "${PAYPAL_URL}",
